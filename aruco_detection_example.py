@@ -26,6 +26,7 @@ sys.path.append(str(Path(__file__).parent.absolute()))
 from marker_utils import ArucoMarker
 from camera.factory import CameraFactory
 
+
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description='ArUco Marker Detection with Camera')
@@ -138,6 +139,8 @@ def main():
                     camera_matrix,
                     dist_coeffs
                 )
+
+                # 将检测结果打印到控制台及显示在图像上
                 i = 0
                 for marker_id, tvec in marker_centers.items():
                     print(f"Marker ID {marker_id}: X={tvec[0]:.3f}m, Y={tvec[1]:.3f}m, Z={tvec[2]:.3f}m")
@@ -164,7 +167,6 @@ def main():
                 
     except Exception as e:
         traceback.print_exc()
-        print(f"Error: {str(e)}")
     finally:
         # 清理资源
         if 'camera' in locals():
