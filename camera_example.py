@@ -41,7 +41,7 @@ def test_realsense_camera():
             print(f"Camera properties: {cam.get_properties()}")
             
             while True:
-                success, frames = cam.read()
+                success, frames = cam.read_frames()
                 if not success or 'color' not in frames:
                     print("Failed to read frame")
                     break

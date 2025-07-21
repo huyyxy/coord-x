@@ -21,25 +21,20 @@ def display_camera_feed(camera, window_name):
     try:
         while True:
             # 读取帧
-            success, frame = camera.read()
+            success, frames = camera.read_frames()
             if not success:
                 print("无法读取帧")
                 break
                 
-            # 对于 RealSense，frame 是一个字典
-            if isinstance(frame, dict):
-                if 'color' in frame:
-                    cv2.imshow(window_name, frame['color'])
-                if 'depth' in frame:
-                    # 将深度图转换为可视化的灰度图
-                    depth_colormap = cv2.applyColorMap(
-                        cv2.convertScaleAbs(frame['depth'], alpha=0.03), 
-                        cv2.COLORMAP_JET
-                    )
-                    cv2.imshow(f"{window_name} - 深度", depth_colormap)
-            else:
-                # 对于 OpenCV 相机，直接显示帧
-                cv2.imshow(window_name, frame)
+            if 'color' in frames:
+                cv2.imshow(window_name, frames['color'])
+            if 'depth' in frames:
+                # 将深度图转换为可视化的灰度图
+                depth_colormap = cv2.applyColorMap(
+                    cv2.convertScaleAbs(frames['depth'], alpha=0.03), 
+                    cv2.COLORMAP_JET
+                )
+                cv2.imshow(f"{window_name} - 深度", depth_colormap)
             
             # 按'q'键退出
             if cv2.waitKey(1) & 0xFF == ord('q'):
