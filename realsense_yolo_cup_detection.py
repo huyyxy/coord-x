@@ -61,6 +61,9 @@ class RealSenseYOLOCupDetector:
         
         # 创建颜色映射对象，用于可视化深度数据
         self.colorizer = rs.colorizer()
+        # self.colorizer.set_option(rs.option.visual_preset, 0) # 0=Dynamic, 1=Fixed, 2=Near, 3=Far
+        # self.colorizer.set_option(rs.option.min_distance, 0) # 单位：米
+        # self.colorizer.set_option(rs.option.max_distance, 16) # 单位：米
     
     def get_frames(self):
         """
@@ -187,6 +190,8 @@ class RealSenseYOLOCupDetector:
         if detections and positions:
             # 在彩色图像上绘制检测结果
             for i, (det, pos) in enumerate(zip(detections, positions)):
+                if det is None or pos is None:
+                    continue
                 x1, y1, x2, y2, conf, _ = map(int, det[:6])
                 
                 # 绘制边界框
