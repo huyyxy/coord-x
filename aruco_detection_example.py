@@ -69,7 +69,17 @@ def load_camera_matrix(camera_matrix_path='camera_matrix.npy',
         return camera_matrix, dist_coeffs
 
 def draw_axis(img, corners, imgpts):
-    """在图像上绘制3D坐标轴。"""
+    """
+    在图像上绘制3D坐标轴。
+    
+    参数:
+        img: 输入图像
+        corners: 标记的角点
+        imgpts: 3D坐标轴在图像平面上的投影点
+    
+    返回:
+        绘制了坐标轴的图像
+    """
     # 将角点转换为整数元组(x, y)
     corner = tuple(corners[0].astype(int).ravel())
     # 将imgpts转换为整数元组并确保是2D点
@@ -106,13 +116,6 @@ def main():
             
         print(f"Camera opened successfully: {camera.get_resolution()} {camera.get_fps()}")
         
-        # 定义坐标轴的3D点（单位为米）
-        axis_length = args.marker_length * 2  # 坐标轴的长度
-        axis_points = np.float32([[0, 0, 0],                           # 原点
-                                 [axis_length, 0, 0],                  # X轴
-                                 [0, axis_length, 0],                  # Y轴
-                                 [0, 0, -axis_length]]).reshape(-1, 3) # Z轴（负值因为在OpenCV中，Z轴远离相机）
-        
         while True:
             # 从相机读取帧
             ret, frame = camera.read()
@@ -124,27 +127,33 @@ def main():
             corners, ids, _ = aruco_detector.detect_markers(frame)
             
             if ids is not None and len(ids) > 0:
-                for i, marker_id in enumerate(ids):
-                    # 估计每个标记的位姿
-                    rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(
-                        corners[i], 
-                        args.marker_length, 
-                        camera_matrix, 
-                        dist_coeffs
+                # 使用ArucoMarker类的方法绘制检测到的标记
+                frame = aruco_detector.draw_detected_markers(frame, corners, ids)
+                
+                # 获取所有检测到标记的3D中心坐标
+                marker_centers = aruco_detector.get_marker_centers_3d(
+                    corners, 
+                    ids,
+                    args.marker_length,
+                    camera_matrix,
+                    dist_coeffs
+                )
+                i = 0
+                for marker_id, tvec in marker_centers.items():
+                    print(f"Marker ID {marker_id}: X={tvec[0]:.3f}m, Y={tvec[1]:.3f}m, Z={tvec[2]:.3f}m")
+
+                    # 显示3D位置信息
+                    pos_text = f"ID {marker_id}: X={tvec[0]:.3f}m, Y={tvec[1]:.3f}m, Z={tvec[2]:.3f}m"
+                    frame = cv2.putText(
+                        frame, 
+                        pos_text, 
+                        (10, 30 + 30 * i), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 
+                        0.7, 
+                        (0, 255, 0), 
+                        2
                     )
-                    
-                    # 绘制检测到的标记及其坐标轴
-                    frame = cv2.aruco.drawDetectedMarkers(frame, corners, ids)
-                    
-                    # 获取标记的3D位置
-                    tvec = tvecs[0][0]  # Translation vector (position in camera coordinates)
-                    
-                    # 显示3D位置
-                    pos_text = f"ID {marker_id[0]}: X={tvec[0]:.3f}m, Y={tvec[1]:.3f}m, Z={tvec[2]:.3f}m"
-                    frame = cv2.putText(frame, pos_text, 
-                              (10, 30 + 30 * i), 
-                              cv2.FONT_HERSHEY_SIMPLEX, 
-                              0.7, (0, 255, 0), 2)
+                    i += 1
             
             # 显示帧
             cv2.imshow('ArUco Marker Detection', frame)
