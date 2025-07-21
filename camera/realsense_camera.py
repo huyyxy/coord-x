@@ -107,7 +107,36 @@ class RealSenseCamera(CameraBase):
             self._pipeline = None
         self._is_opened = False
     
-    def read(self) -> Tuple[bool, Optional[Dict[str, np.ndarray]]]:
+    def read(self) -> Tuple[bool, Optional[np.ndarray]]:
+        """
+        从相机读取一帧图像。
+        
+        返回:
+            tuple: (success, frame)，其中success是布尔值表示是否成功读取帧，
+                  frame是捕获的图像，以numpy数组形式返回。
+        """
+        if not self.is_opened and not self.open():
+            return False, None
+            
+        try:
+            frames = self._pipeline.wait_for_frames()
+            result = None
+            
+            if self._enable_color:
+                color_frame = frames.get_color_frame()
+                if color_frame:
+                    result = np.asanyarray(color_frame.get_data())
+                else:
+                    return False, None
+            
+            return True, result
+            
+        except Exception as e:
+            print(f"Error reading from RealSense camera: {e}")
+            self._is_opened = False
+            return False, None
+
+    def read_frames(self) -> Tuple[bool, Optional[Dict[str, np.ndarray]]]:
         """
         从相机读取一帧。
         

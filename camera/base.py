@@ -48,6 +48,16 @@ class CameraBase(ABC):
                   frame是捕获的图像，以numpy数组形式返回。
         """
         pass
+
+    @abstractmethod
+    def read_frames(self) -> Tuple[bool, Optional[Dict[str, np.ndarray]]]:
+        """
+        从相机读取一帧。
+        
+        返回:
+            tuple: (success, frames) 其中 success 是布尔值，frames 是包含 'color' 和/或 'depth' 帧的字典，
+                  值为 numpy 数组
+        """
     
     @abstractmethod
     def get_resolution(self) -> Tuple[int, int]:

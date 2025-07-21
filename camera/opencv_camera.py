@@ -74,6 +74,26 @@ class OpenCVCamera(CameraBase):
             return False, None
             
         return True, frame
+
+    def read_frames(self) -> Tuple[bool, Optional[Dict[str, np.ndarray]]]:
+        """
+        从相机读取一帧。
+        
+        返回:
+            tuple: (success, frames) 其中 success 是布尔值，frames 是包含 'color' 和/或 'depth' 帧的字典，
+                  值为 numpy 数组
+        """
+        if not self.is_opened and not self.open():
+            return False, None
+        
+        result = {}
+        ret, frame = self._cap.read()
+        if not ret:
+            self._is_opened = False
+            return False, None
+        result['color'] = frame
+        
+        return True, result
     
     def get_resolution(self) -> Tuple[int, int]:
         """获取当前相机分辨率。"""
