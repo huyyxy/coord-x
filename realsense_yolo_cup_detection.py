@@ -125,21 +125,49 @@ class RealSenseYOLOCupDetector:
             
         返回:
             tuple: 相机坐标系中的(x, y, z)坐标，单位为米
+
+        注意：在 RealSense 相机的坐标系中：
+            原点（Origin）：位于相机的光心（optical center）
+            Z 轴：从相机指向正前方（与光轴重合）
+            X 轴：向右（从相机视角看）
+            Y 轴：向下（从相机视角看）
         """
-        # 计算边界框的中心点
-        x1, y1, x2, y2 = map(int, bbox[:4])
-        center_x = (x1 + x2) // 2
-        center_y = (y1 + y2) // 2
+        # 1. 获取图像尺寸
+        h, w = depth_image.shape[:2]
         
-        # 获取中心点处的深度值
-        depth = depth_image[center_y, center_x] * self.depth_scale  # Convert to meters
+        # 2. 确保边界框在图像范围内
+        x1 = max(0, min(int(bbox[0]), w-1))
+        y1 = max(0, min(int(bbox[1]), h-1))
+        x2 = max(0, min(int(bbox[2]), w-1))
+        y2 = max(0, min(int(bbox[3]), h-1))
         
-        # 获取相机内参
+        # 3. 计算中心点（使用浮点运算）
+        center_x = (x1 + x2) / 2.0
+        center_y = (y1 + y2) / 2.0
+        
+        # 4. 获取中心点周围区域的中值深度（更鲁棒）
+        half_size = 5  # 可以调整
+        x_start = max(0, int(center_x) - half_size)
+        y_start = max(0, int(center_y) - half_size)
+        x_end = min(w, int(center_x) + half_size + 1)
+        y_end = min(h, int(center_y) + half_size + 1)
+        
+        roi = depth_image[y_start:y_end, x_start:x_end]
+        if roi.size == 0:
+            return None
+        
+        # 使用非零深度值的中位数
+        valid_depths = roi[roi > 0]
+        if valid_depths.size == 0:
+            return None
+        
+        depth = np.median(valid_depths) * self.depth_scale  # 转换为米
+        
+        # 5. 获取相机内参
         color_profile = self.profile.get_stream(rs.stream.color).as_video_stream_profile()
         intrinsics = color_profile.get_intrinsics()
         
-        # 将像素坐标转换为相机坐标
-        # 注意：这是简化版本，未考虑镜头畸变
+        # 6. 将像素坐标转换为相机坐标
         x = (center_x - intrinsics.ppx) / intrinsics.fx * depth
         y = (center_y - intrinsics.ppy) / intrinsics.fy * depth
         z = depth
@@ -156,22 +184,23 @@ class RealSenseYOLOCupDetector:
             detections: 检测结果列表
             positions: 与检测结果对应的3D位置列表
         """
-        # 在彩色图像上绘制检测结果
-        for i, (det, pos) in enumerate(zip(detections, positions)):
-            x1, y1, x2, y2, conf, _ = map(int, det[:6])
-            
-            # 绘制边界框
-            cv2.rectangle(color_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            
-            # 绘制中心点
-            center_x = (x1 + x2) // 2
-            center_y = (y1 + y2) // 2
-            cv2.circle(color_image, (center_x, center_y), 5, (0, 0, 255), -1)
-            
-            # 显示3D位置
-            pos_text = f'({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f}) m'
-            cv2.putText(color_image, pos_text, (x1, y1 - 10), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        if detections and positions:
+            # 在彩色图像上绘制检测结果
+            for i, (det, pos) in enumerate(zip(detections, positions)):
+                x1, y1, x2, y2, conf, _ = map(int, det[:6])
+                
+                # 绘制边界框
+                cv2.rectangle(color_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                
+                # 绘制中心点
+                center_x = (x1 + x2) // 2
+                center_y = (y1 + y2) // 2
+                cv2.circle(color_image, (center_x, center_y), 5, (0, 0, 255), -1)
+                
+                # 显示3D位置
+                pos_text = f'({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f}) m'
+                cv2.putText(color_image, pos_text, (x1, y1 - 10), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         
         # 水平堆叠图像
         images = np.hstack((color_image, depth_colormap))
