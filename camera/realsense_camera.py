@@ -49,6 +49,7 @@ class RealSenseCamera(CameraBase):
         self._config = None
         self._is_opened = False
         self._depth_scale = 1.0
+        self._intrinsics = None
     
     def open(self) -> bool:
         """打开相机连接。"""
@@ -88,6 +89,9 @@ class RealSenseCamera(CameraBase):
             if self._enable_depth:
                 depth_sensor = profile.get_device().first_depth_sensor()
                 self._depth_scale = depth_sensor.get_depth_scale()
+
+            color_profile = profile.get_stream(rs.stream.color).as_video_stream_profile()
+            self._intrinsics = color_profile.get_intrinsics()
             
             self._is_opened = True
             return True
@@ -247,7 +251,8 @@ class RealSenseCamera(CameraBase):
             'device_id': self.device_id,
             'enable_depth': self._enable_depth,
             'enable_color': self._enable_color,
-            'depth_scale': self._depth_scale
+            'depth_scale': self._depth_scale,
+            'intrinsics': self._intrinsics
         })
         return props
     

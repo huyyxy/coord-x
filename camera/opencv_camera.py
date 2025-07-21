@@ -3,7 +3,7 @@
 """
 import cv2
 import numpy as np
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 
 from .base import CameraBase
 
